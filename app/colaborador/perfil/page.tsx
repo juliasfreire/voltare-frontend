@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -100,7 +99,7 @@ export default function ClientePage() {
                                     else window.alert("Mensagens estarão disponíveis em breve.");
                                 }}
                                 aria-current={ativo ? "page" : undefined}
-                                className={`flex min-h-[70px] items-center justify-center gap-2 px-3 py-4 text-sm transition sm:text-base ${
+                                className={`flex min-h-17.5 items-center justify-center gap-2 px-3 py-4 text-sm transition sm:text-base ${
                                     ativo
                                         ? "bg-sky-200 font-semibold text-cyan-900"
                                         : "text-slate-600 hover:bg-sky-50"
@@ -126,7 +125,7 @@ export default function ClientePage() {
                                 <h2 className="text-xl font-bold text-slate-900">
                                     Não foi possível carregar os profissionais
                                 </h2>
-                                <p className="mt-3 break-words text-sm text-red-700">{erro}</p>
+                                <p className="mt-3 wrap-break-word text-sm text-red-700">{erro}</p>
                                 <button onClick={() => setAtualizar((n) => n + 1)} className="mt-5 rounded-lg bg-cyan-950 px-6 py-3 font-semibold text-white hover:bg-cyan-900">
                                     Tentar novamente
                                 </button>
@@ -157,7 +156,7 @@ export default function ClientePage() {
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex flex-col justify-between gap-4 xl:flex-row">
                                                         <div>
-                                                            <h2 className="break-words text-xl font-bold text-slate-950 sm:text-2xl">
+                                                            <h2 className="wrap-break-word text-xl font-bold text-slate-950 sm:text-2xl">
                                                                 {p.especialidade}
                                                             </h2>
                                                             <p className="mt-1 text-base text-slate-700 sm:text-lg">
@@ -181,7 +180,7 @@ export default function ClientePage() {
                                                         </div>
                                                     </div>
 
-                                                    <p className="mt-5 whitespace-pre-line break-words text-base leading-7 text-slate-700 sm:text-lg">
+                                                    <p className="mt-5 whitespace-pre-line wrap-break-word text-base leading-7 text-slate-700 sm:text-lg">
                                                         {p.descricao}
                                                     </p>
 
@@ -190,7 +189,7 @@ export default function ClientePage() {
                                                             <Briefcase className="h-5 w-5 text-slate-500" />
                                                             Experiência
                                                         </h3>
-                                                        <p className="whitespace-pre-line break-words text-sm leading-6 text-slate-600 sm:text-base">
+                                                        <p className="whitespace-pre-line wrap-break-word text-sm leading-6 text-slate-600 sm:text-base">
                                                             {p.experiencia}
                                                         </p>
                                                     </div>

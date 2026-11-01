@@ -1,10 +1,10 @@
-
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import Swal from "sweetalert2";
 import { Zap } from "lucide-react";
+import { jwtDecode } from "jwt-decode";
 
 const API_URL = (
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
@@ -17,7 +17,7 @@ export default function LoginPage() {
     const [senha, setSenha] = useState("");
     const [carregando, setCarregando] = useState(false);
 
-    async function logar(e: FormEvent<HTMLFormElement>) {
+    async function logar(e: any) {
         e.preventDefault();
 
         if (!email.trim() || !senha) {
@@ -46,7 +46,6 @@ export default function LoginPage() {
             });
 
             const texto = await resposta.text();
-
             let dados: Record<string, any> = {};
 
             try {
@@ -63,24 +62,29 @@ export default function LoginPage() {
                 );
             }
 
-            const usuario = dados.usuario ?? dados.user ?? dados.data ?? dados;
+            // O backend retorna apenas o 'token'
+            if (!dados.token) {
+                throw new Error("Token de autenticação não recebido do servidor.");
+            }
 
-            const tipo = String(
-                usuario.tipo ??
-                usuario.perfil ??
-                usuario.role ??
-                usuario.tipoUsuario ??
-                dados.tipo ??
-                ""
-            ).toLowerCase();
+            // Salva o token JWT no localStorage
+            localStorage.setItem("token", dados.token);
 
-            if (tipo.includes("cliente")) {
+            // Decodifica o Token JWT para ler os dados do usuário (id, email, tipo)
+            const usuarioDecodificado: any = jwtDecode(dados.token);
+
+            const tipo = String(usuarioDecodificado.tipo || "").toLowerCase().trim();
+
+            const ehCliente = tipo.includes("cliente") || tipo.includes("client") || tipo === "1";
+            const ehColaborador = tipo.includes("colaborador") || tipo.includes("profissional") || tipo.includes("provider") || tipo.includes("prestador") || tipo === "2";
+
+            if (ehCliente) {
                 localStorage.setItem(
                     "usuarioLogado",
                     JSON.stringify({
-                        nome: usuario.nome ?? usuario.name ?? usuario.username,
-                        email: usuario.email ?? email.trim(),
-                        tipo,
+                        id: usuarioDecodificado.id, // ID extraído com sucesso do token (ex: 5)
+                        email: usuarioDecodificado.email ?? email.trim(),
+                        tipo: "cliente",
                     })
                 );
 
@@ -92,16 +96,13 @@ export default function LoginPage() {
                 });
 
                 router.push("/cliente");
-            } else if (
-                tipo.includes("colaborador") ||
-                tipo.includes("profissional")
-            ) {
+            } else if (ehColaborador) {
                 localStorage.setItem(
                     "usuarioLogado",
                     JSON.stringify({
-                        nome: usuario.nome ?? usuario.name ?? usuario.username,
-                        email: usuario.email ?? email.trim(),
-                        tipo,
+                        id: usuarioDecodificado.id,
+                        email: usuarioDecodificado.email ?? email.trim(),
+                        tipo: "colaborador",
                     })
                 );
 
@@ -115,9 +116,10 @@ export default function LoginPage() {
                 router.push("/colaborador");
             } else {
                 throw new Error(
-                    "O backend não informou se a conta é de cliente ou colaborador."
+                    `O tipo de conta '${tipo}' dentro do token não é válido.`
                 );
             }
+
         } catch (error) {
             Swal.fire({
                 title: "Não foi possível entrar",

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -21,6 +20,7 @@ type Servico = {
     descricao?: string;
     experiencia?: string;
     categoria?: string;
+    prestador_nome?: string;
     nomeColaborador?: string;
     nomeProfissional?: string;
     colaborador?: string | {
@@ -59,6 +59,7 @@ function nomeDoColaborador(servico: Servico): string {
     }
 
     return (
+        servico.prestador_nome ||
         servico.colaborador?.nome ||
         servico.colaborador?.username ||
         servico.nomeColaborador ||
@@ -71,7 +72,7 @@ export default function ClientePage() {
     const router = useRouter();
 
     const [servicos, setServicos] = useState<Servico[]>([]);
-    const [favoritos, setFavoritos] = useState<string[]>([]);
+    const [favoritos, setFavoritos] = useState<(number | string)[]>([]);
     const [carregando, setCarregando] = useState(true);
     const [erro, setErro] = useState("");
     const [atualizar, setAtualizar] = useState(0);
@@ -112,16 +113,31 @@ export default function ClientePage() {
                 setCarregando(true);
                 setErro("");
 
+                // Pega o token salvo no login do localStorage
+                const token = localStorage.getItem("token");
+
+                if (!token) {
+                    router.push("/login");
+                    throw new Error("Sessão não encontrada. Faça login novamente.");
+                }
+
                 const resposta = await fetch(`${API_URL}/servicos`, {
                     method: "GET",
                     headers: {
-                        Accept: "application/json",
+                        "Accept": "application/json",
+                        "Authorization": `Bearer ${token}`
                     },
                     cache: "no-store",
                     signal: controller.signal,
                 });
 
                 if (!resposta.ok) {
+                    if (resposta.status === 401 || resposta.status === 403) {
+                        localStorage.removeItem("token");
+                        localStorage.removeItem("usuarioLogado");
+                        router.push("/login");
+                        throw new Error("Sessão expirada. Faça login novamente.");
+                    }
                     throw new Error(`Erro HTTP ${resposta.status}`);
                 }
 
@@ -152,17 +168,17 @@ export default function ClientePage() {
         carregarServicos();
 
         return () => controller.abort();
-    }, [atualizar]);
+    }, [atualizar, router]);
 
     useEffect(() => {
         setAno(new Date().getFullYear());
     }, []);
 
-    function alternarFavorito(chave: string) {
+    function alternarFavorito(id: number | string) {
         setFavoritos((atuais) =>
-            atuais.includes(chave)
-                ? atuais.filter((item) => item !== chave)
-                : [...atuais, chave]
+            atuais.includes(id)
+                ? atuais.filter((item) => item !== id)
+                : [...atuais, id]
         );
     }
 
@@ -212,7 +228,7 @@ export default function ClientePage() {
                                 type="button"
                                 onClick={() => router.push(rota)}
                                 aria-current={ativo ? "page" : undefined}
-                                className={`flex min-h-[70px] items-center justify-center gap-2 px-3 py-4 text-sm transition sm:text-base ${
+                                className={`flex min-h-17.5 items-center justify-center gap-2 px-3 py-4 text-sm transition sm:text-base ${
                                     ativo
                                         ? "bg-sky-200 font-semibold text-cyan-900"
                                         : "text-slate-600 hover:bg-sky-50"
@@ -246,7 +262,7 @@ export default function ClientePage() {
                                     Não foi possível carregar os serviços
                                 </h2>
 
-                                <p className="mt-3 break-words text-sm text-red-700">
+                                <p className="mt-3 warp-break-word text-sm text-red-700">
                                     {erro}
                                 </p>
 
@@ -296,7 +312,7 @@ export default function ClientePage() {
                                                     </div>
 
                                                     <div className="min-w-0">
-                                                        <h2 className="break-words font-bold text-slate-950">
+                                                        <h2 className="wrap-break-word reak-words font-bold text-slate-950">
                                                             {autor}
                                                         </h2>
                                                         <p className="text-sm text-slate-500">
@@ -326,7 +342,7 @@ export default function ClientePage() {
                                                 </button>
                                             </div>
 
-                                            <h3 className="mt-5 break-words text-lg font-semibold text-cyan-950">
+                                            <h3 className="mt-5 wrap-break-word text-lg font-semibold text-cyan-950">
                                                 {titulo}
                                             </h3>
 
@@ -336,7 +352,7 @@ export default function ClientePage() {
                                                 </p>
                                             )}
 
-                                            <p className="mt-3 whitespace-pre-line break-words leading-7 text-slate-600">
+                                            <p className="mt-3 whitespace-pre-line wrap-break-word leading-7 text-slate-600">
                                                 {servico.descricao || "Sem descrição."}
                                             </p>
 
@@ -347,7 +363,7 @@ export default function ClientePage() {
                                                         Experiência
                                                     </h4>
 
-                                                    <p className="whitespace-pre-line break-words text-sm leading-6 text-slate-600">
+                                                    <p className="whitespace-pre-line wrap-break-word text-sm leading-6 text-slate-600">
                                                         {servico.experiencia}
                                                     </p>
                                                 </div>

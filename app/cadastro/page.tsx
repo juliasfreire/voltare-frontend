@@ -1,7 +1,8 @@
-
 "use client";
 
-import { useState, type FormEvent } from "react";
+//Julinha esteve aqui
+
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import { Zap } from "lucide-react";
@@ -16,10 +17,10 @@ export default function CadastroPage() {
     const [nome, setNome] = useState("");
     const [email, setEmail] = useState("");
     const [senha, setSenha] = useState("");
-    const [tipo, setTipo] = useState<"cliente" | "profissional">("cliente");
+    const [tipo, setTipo] = useState<"cliente" | "prestador">("cliente");
     const [carregando, setCarregando] = useState(false);
 
-    async function cadastrar(e: FormEvent<HTMLFormElement>) {
+    async function cadastrar(e:any) {
         e.preventDefault();
 
         if (!nome.trim() || !email.trim() || !senha) {
@@ -243,7 +244,7 @@ export default function CadastroPage() {
 
                             <label
                                 className={`cursor-pointer rounded-lg border p-3 text-center transition ${
-                                    tipo === "profissional"
+                                    tipo === "prestador"
                                         ? "border-sky-300 bg-sky-50"
                                         : "border-slate-200 hover:bg-slate-50"
                                 }`}
@@ -251,9 +252,9 @@ export default function CadastroPage() {
                                 <input
                                     type="radio"
                                     name="tipo"
-                                    value="profissional"
-                                    checked={tipo === "profissional"}
-                                    onChange={() => setTipo("profissional")}
+                                    value="prestador"
+                                    checked={tipo === "prestador"}
+                                    onChange={() => setTipo("prestador")}
                                     className="sr-only"
                                 />
 

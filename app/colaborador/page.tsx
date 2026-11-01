@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     Zap, LogOut, LayoutGrid, ShoppingCart, MessageCircle,
@@ -14,6 +13,7 @@ type Servico = {
     titulo?: string;
     descricao?: string;
     experiencia?: string;
+    prestador_nome?: string;
     nomeColaborador?: string;
     nomeProfissional?: string;
     colaborador?: string | { nome?: string; username?: string };
@@ -35,8 +35,14 @@ function lista(dados: unknown): Servico[] {
 
 function autor(s: Servico): string {
     if (typeof s.colaborador === "string") return s.colaborador;
-    return s.colaborador?.nome || s.colaborador?.username ||
-        s.nomeColaborador || s.nomeProfissional || "Colaborador";
+    return (
+        s.prestador_nome || // Mapeia o retorno do INNER JOIN do backend
+        s.colaborador?.nome ||
+        s.colaborador?.username ||
+        s.nomeColaborador ||
+        s.nomeProfissional ||
+        "Colaborador"
+    );
 }
 
 export default function ColaboradorPage() {
@@ -61,22 +67,58 @@ export default function ColaboradorPage() {
                 setCarregando(true);
                 setErro("");
 
+                const token = localStorage.getItem("token");
+
+                // --- 1. VERIFIQUE AQUI SE O TOKEN VEIO VAZIO ANTES DO FETCH ---
+                if (!token) {
+                    router.push("/login");
+                    throw new Error("Você precisa estar logado para acessar esta página.");
+                }
+
+                const headersAuth = {
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token}`,
+                };
+
                 const r = await fetch(`${API}/servicos`, {
-                    cache: "no-store", signal: ctrl.signal,
+                    headers: headersAuth,
+                    cache: "no-store",
+                    signal: ctrl.signal,
                 });
-                if (!r.ok) throw new Error(`Erro HTTP ${r.status}`);
+
+                // --- 2. TRATE AQUI SE O BACKEND RETORNOU 401 OU 403 ---
+                if (!r.ok) {
+                    if (r.status === 401 || r.status === 403) {
+                        localStorage.removeItem("token");
+                        localStorage.removeItem("usuarioLogado");
+                        router.push("/login");
+                        throw new Error("Sessão expirada. Faça login novamente.");
+                    }
+                    throw new Error(`Erro HTTP ${r.status}`);
+                }
+
                 setServicos(lista(await r.json()));
 
                 try {
                     const resposta = await fetch(`${API}/servicos/meus`, {
-                        cache: "no-store", signal: ctrl.signal,
+                        headers: headersAuth,
+                        cache: "no-store",
+                        signal: ctrl.signal,
                     });
-                    if (resposta.ok) setMeus(lista(await resposta.json()));
+
+                    if (resposta.ok) {
+                        setMeus(lista(await resposta.json()));
+                    }
                 } catch {
+                    // Trata silenciosamente se a rota '/servicos/meus' falhar
                 }
             } catch (e) {
                 if (e instanceof Error && e.name === "AbortError") return;
-                setErro("Não foi possível carregar os serviços.");
+                setErro(
+                    e instanceof Error
+                        ? e.message
+                        : "Não foi possível carregar os serviços."
+                );
             } finally {
                 if (!ctrl.signal.aborted) setCarregando(false);
             }
@@ -84,25 +126,39 @@ export default function ColaboradorPage() {
 
         carregar();
         return () => ctrl.abort();
-    }, [atualizar]);
+    }, [atualizar, router]);
 
-    async function cadastrar(e: FormEvent<HTMLFormElement>) {
+    async function cadastrar(e: any) {
         e.preventDefault();
         setSalvando(true);
         setErroCadastro("");
 
         try {
+            const token = localStorage.getItem("token");
+
             const r = await fetch(`${API}/servicos`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
                 body: JSON.stringify({
                     nome: nome.trim(),
+                    titulo: nome.trim(), // Garante compatibilidade se o backend esperar 'titulo'
                     experiencia: experiencia.trim(),
                     descricao: descricao.trim(),
                 }),
             });
 
-            if (!r.ok) throw new Error(`Erro HTTP ${r.status}`);
+            if (!r.ok) {
+                const dadosErro = await r.json().catch(() => ({}));
+                throw new Error(
+                    dadosErro.mensagem ||
+                    dadosErro.message ||
+                    `Erro HTTP ${r.status}`
+                );
+            }
 
             setModal(false);
             setNome("");
@@ -124,7 +180,7 @@ export default function ColaboradorPage() {
         { nome: "Mensagens", Icon: MessageCircle, acao: () => window.alert("Mensagens em breve.") },
         { nome: "Perfil", Icon: UserCircle, acao: () => router.push("/colaborador/perfil") },
     ];
-
+    
     return (
         <main className="min-h-screen bg-sky-50 text-slate-800">
             <header className="flex items-center justify-between border-b border-sky-100 bg-white px-5 py-4 shadow-sm sm:px-10">
@@ -143,7 +199,7 @@ export default function ColaboradorPage() {
                 <div className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm">
                     <nav className="grid grid-cols-2 border-b border-slate-200 sm:grid-cols-4">
                         {abas.map(({ nome: aba, Icon, acao }, i) => (
-                            <button key={aba} onClick={acao} className={`flex min-h-[70px] items-center justify-center gap-2 px-3 py-4 ${i === 0 ? "bg-sky-200 font-semibold text-cyan-900" : "hover:bg-sky-50"}`}>
+                            <button key={aba} onClick={acao} className={`flex min-h-17.5 items-center justify-center gap-2 px-3 py-4 ${i === 0 ? "bg-sky-200 font-semibold text-cyan-900" : "hover:bg-sky-50"}`}>
                                 <Icon className="h-5 w-5" />{aba}
                             </button>
                         ))}
