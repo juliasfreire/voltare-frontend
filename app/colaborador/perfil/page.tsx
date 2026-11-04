@@ -1,212 +1,436 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-    Zap, LogOut, BriefcaseBusiness, ShoppingCart, MessageCircle,
-    UserCircle, Heart, Briefcase,
+  LayoutGrid,
+  ShoppingCart,
+  MessageCircle,
+  UserCircle,
+  BriefcaseBusiness,
+  Package,
+  LogOut,
+  RefreshCw,
 } from "lucide-react";
-import {
-    listarProfissionais,
-    type Profissional,
-} from "../../../profissionais";
 
-export default function ClientePage() {
-    const router = useRouter();
-    const [profissionais, setProfissionais] = useState<Profissional[]>([]);
-    const [favoritos, setFavoritos] = useState<(number | string)[]>([]);
-    const [carregando, setCarregando] = useState(true);
-    const [erro, setErro] = useState("");
-    const [atualizar, setAtualizar] = useState(0);
-    const [ano, setAno] = useState<number | null>(null);
+// Endereço do backend
+const API = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+).replace(/\/$/, "");
 
-    const abas = [
-        { nome: "Profissionais", Icon: BriefcaseBusiness, rota: "/cliente", ativo: true },
-        { nome: "Loja", Icon: ShoppingCart, rota: "/cliente/loja" },
-        { nome: "Mensagens", Icon: MessageCircle },
-        { nome: "Perfil", Icon: UserCircle, rota: "/cliente/perfil" },
-    ];
+const ROTA_MEUS_PRODUTOS = "/produtos/meus";
 
-    useEffect(() => {
-        const controller = new AbortController();
+type Usuario = {
+  nome?: string;
+  email?: string;
+  tipo?: string;
+  id?: number | string;
+};
 
-        async function carregar() {
-            try {
-                setCarregando(true);
-                setErro("");
-                setProfissionais(
-                    await listarProfissionais(controller.signal)
-                );
-            } catch (error) {
-                if (error instanceof Error && error.name === "AbortError") return;
-                setErro(
-                    error instanceof Error
-                        ? error.message
-                        : "Não foi possível carregar os profissionais."
-                );
-            } finally {
-                if (!controller.signal.aborted) setCarregando(false);
-            }
+type Servico = {
+  id?: number | string;
+  nome?: string;
+  titulo?: string;
+  descricao?: string;
+  experiencia?: string;
+};
+
+type Produto = {
+  id?: number | string;
+  nome?: string;
+  titulo?: string;
+  descricao?: string;
+  preco?: number | string;
+  imagem?: string;
+  imagem_url?: string;
+  categoria?: string;
+};
+
+function lista(dados: unknown): any[] {
+  if (Array.isArray(dados)) return dados;
+
+  if (dados && typeof dados === "object") {
+    const d = dados as Record<string, unknown>;
+    const itens = d.content ?? d.servicos ?? d.produtos ?? d.data;
+
+    if (Array.isArray(itens)) return itens;
+  }
+
+  return [];
+}
+
+export default function PerfilColaboradorPage() {
+  const router = useRouter();
+
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [servicos, setServicos] = useState<Servico[]>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
+  const [atualizar, setAtualizar] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function carregarPerfil() {
+      try {
+        setCarregando(true);
+        setErro("");
+
+        const token = localStorage.getItem("token");
+        const usuarioSalvo = localStorage.getItem("usuarioLogado");
+
+        if (!token || !usuarioSalvo) {
+          router.push("/login");
+          return;
         }
 
-        carregar();
-        return () => controller.abort();
-    }, [atualizar]);
+        const dadosUsuario = JSON.parse(usuarioSalvo) as Usuario;
+        setUsuario(dadosUsuario);
 
-    useEffect(() => {
-        setAno(new Date().getFullYear());
-    }, []);
+        const headers = {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        };
 
-    function alternarFavorito(id: number | string) {
-        setFavoritos((lista) =>
-            lista.includes(id)
-                ? lista.filter((item) => item !== id)
-                : [...lista, id]
+        const respostaServicos = await fetch(
+          `${API}/servicos/meus`,
+          {
+            method: "GET",
+            headers,
+            cache: "no-store",
+            signal: controller.signal,
+          }
         );
+
+        if (
+          respostaServicos.status === 401 ||
+          respostaServicos.status === 403
+        ) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("usuarioLogado");
+          router.push("/login");
+          return;
+        }
+
+        if (!respostaServicos.ok) {
+          throw new Error(
+            `Erro ao carregar serviços: HTTP ${respostaServicos.status}`
+          );
+        }
+
+        const dadosServicos = await respostaServicos.json();
+        setServicos(lista(dadosServicos));
+
+        try {
+          const respostaProdutos = await fetch(
+            `${API}${ROTA_MEUS_PRODUTOS}`,
+            {
+              method: "GET",
+              headers,
+              cache: "no-store",
+              signal: controller.signal,
+            }
+          );
+
+          if (
+            respostaProdutos.status === 401 ||
+            respostaProdutos.status === 403
+          ) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("usuarioLogado");
+            router.push("/login");
+            return;
+          }
+
+          if (respostaProdutos.ok) {
+            const dadosProdutos = await respostaProdutos.json();
+            setProdutos(lista(dadosProdutos));
+          } else {
+            setProdutos([]);
+            console.warn(
+              "Não foi possível carregar os produtos:",
+              respostaProdutos.status
+            );
+          }
+        } catch (e) {
+          if (e instanceof Error && e.name === "AbortError") return;
+
+          console.error("Erro ao buscar produtos:", e);
+          setProdutos([]);
+        }
+      } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") return;
+
+        setErro(
+          e instanceof Error
+            ? e.message
+            : "Não foi possível carregar seu perfil."
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setCarregando(false);
+        }
+      }
     }
 
-    return (
-        <main className="min-h-screen bg-sky-50 text-slate-800">
-            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100 bg-white px-5 py-4 shadow-sm sm:px-10">
-                <button onClick={() => router.push("/cliente")} aria-label="Página inicial" className="flex items-center gap-3">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-200">
-                        <Zap className="h-7 w-7 fill-amber-300 text-amber-950" />
-                    </span>
-                    <span className="text-xl font-bold text-cyan-900 sm:text-2xl">
-                        EletroConnect
-                    </span>
+    carregarPerfil();
+
+    return () => controller.abort();
+  }, [atualizar, router]);
+
+  // Navegação entre as páginas
+  const abas = [
+    {
+      nome: "Início",
+      Icon: LayoutGrid,
+      rota: "/colaborador",
+    },
+    {
+      nome: "Loja",
+      Icon: ShoppingCart,
+      rota: "/colaborador/loja",
+    },
+    {
+      nome: "Mensagens",
+      Icon: MessageCircle,
+      rota: "/colaborador/mensagens",
+    },
+    {
+      nome: "Perfil",
+      Icon: UserCircle,
+      rota: "/colaborador/perfil",
+    },
+  ];
+
+  function sair() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("usuarioLogado");
+    router.push("/login");
+  }
+
+  return (
+    <main className="min-h-screen overflow-x-hidden bg-sky-50 text-slate-800">
+
+      <div className="mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+
+        <div className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm">
+
+          <nav className="grid grid-cols-2 border-b border-slate-200 sm:grid-cols-4">
+            {abas.map(({ nome, Icon, rota }) => (
+              <button
+                key={nome}
+                onClick={() => router.push(rota)}
+                className={`flex min-h-14 items-center justify-center gap-2 px-2 py-3 text-sm transition sm:min-h-16 sm:px-3 sm:py-4 sm:text-base ${
+                  nome === "Perfil"
+                    ? "bg-sky-200 font-semibold text-cyan-950"
+                    : "text-slate-600 hover:bg-sky-50"
+                }`}
+              >
+                <Icon className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
+                <span>{nome}</span>
+              </button>
+            ))}
+          </nav>
+
+          <section className="min-h-[650px] bg-slate-50/70 px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
+
+            <div className="mx-auto max-w-6xl">
+
+              <article className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-8">
+
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-sky-200 sm:h-20 sm:w-20">
+                  <UserCircle className="h-9 w-9 text-cyan-900 sm:h-11 sm:w-11" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+
+                  <h1 className="break-words text-xl font-bold text-slate-950 sm:text-2xl">
+                    {usuario?.nome || "Colaborador"}
+                  </h1>
+
+                  <p className="mt-1 break-all text-sm text-slate-500 sm:text-base sm:text-lg">
+                    {usuario?.email || "E-mail não informado"}
+                  </p>
+
+                  <span className="mt-3 inline-flex max-w-full rounded-full bg-sky-200 px-3 py-2 text-xs font-medium text-cyan-950 sm:px-4 sm:text-sm">
+                    Vendedor e prestador de serviços
+                  </span>
+
+                </div>
+
+                <button
+                  onClick={sair}
+                  className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-red-50 hover:text-red-700 sm:w-auto sm:py-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sair
                 </button>
 
+              </article>
+
+              <section className="mt-8 sm:mt-9">
+
                 <div className="flex items-center gap-3">
-                    <span className="text-sm text-slate-600 sm:text-base">
-                        Olá, Cliente
-                    </span>
-                    <button onClick={() => router.push("/login")} aria-label="Sair da conta" className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-cyan-900">
-                        <LogOut className="h-6 w-6" />
-                    </button>
+                  <BriefcaseBusiness className="h-5 w-5 shrink-0 text-cyan-900 sm:h-6 sm:w-6" />
+
+                  <h2 className="text-xl font-bold text-slate-950 sm:text-2xl">
+                    Seus Serviços
+                  </h2>
                 </div>
-            </header>
 
-            <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-8 sm:py-10">
-                <div className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm">
-                    <nav className="grid grid-cols-2 border-b border-slate-200 sm:grid-cols-4">
-                        {abas.map(({ nome, Icon, rota, ativo }) => (
-                            <button
-                                key={nome}
-                                type="button"
-                                onClick={() => {
-                                    if (rota) router.push(rota);
-                                    else window.alert("Mensagens estarão disponíveis em breve.");
-                                }}
-                                aria-current={ativo ? "page" : undefined}
-                                className={`flex min-h-17.5 items-center justify-center gap-2 px-3 py-4 text-sm transition sm:text-base ${
-                                    ativo
-                                        ? "bg-sky-200 font-semibold text-cyan-900"
-                                        : "text-slate-600 hover:bg-sky-50"
-                                }`}
-                            >
-                                <Icon className="h-6 w-6 shrink-0" />
-                                {nome}
-                            </button>
-                        ))}
-                    </nav>
+                {carregando ? (
+                  <p className="py-12 text-center text-sm text-slate-500 sm:py-16 sm:text-base">
+                    Carregando seus serviços...
+                  </p>
+                ) : erro ? (
+                  <p className="mt-5 break-words rounded-xl bg-white p-5 text-center text-sm text-red-600 sm:mt-6 sm:p-6 sm:text-base">
+                    {erro}
+                  </p>
+                ) : servicos.length === 0 ? (
+                  <div className="py-10 text-center sm:py-14">
+                    <p className="text-base text-slate-500 sm:text-lg">
+                      Nenhum serviço cadastrado.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-5 grid grid-cols-1 gap-4 sm:mt-6 sm:grid-cols-2 sm:gap-5">
 
-                    <section className="bg-slate-50/70 px-4 py-7 sm:px-8 sm:py-9">
-                        <h1 className="mb-7 text-2xl font-bold text-slate-900 sm:text-3xl">
-                            Rede de Profissionais
-                        </h1>
+                    {servicos.map((servico, index) => (
+                      <article
+                        key={servico.id ?? index}
+                        className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-6"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
 
-                        {carregando ? (
-                            <p className="rounded-2xl bg-white px-6 py-12 text-center text-slate-600">
-                                Carregando profissionais...
-                            </p>
-                        ) : erro ? (
-                            <div className="rounded-2xl border border-red-200 bg-white px-6 py-10 text-center">
-                                <h2 className="text-xl font-bold text-slate-900">
-                                    Não foi possível carregar os profissionais
-                                </h2>
-                                <p className="mt-3 wrap-break-word text-sm text-red-700">{erro}</p>
-                                <button onClick={() => setAtualizar((n) => n + 1)} className="mt-5 rounded-lg bg-cyan-950 px-6 py-3 font-semibold text-white hover:bg-cyan-900">
-                                    Tentar novamente
-                                </button>
-                            </div>
-                        ) : profissionais.length === 0 ? (
-                            <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
-                                <BriefcaseBusiness className="mx-auto mb-4 h-12 w-12 text-sky-700" />
-                                <h2 className="text-xl font-bold text-slate-900">
-                                    Nenhum profissional cadastrado
-                                </h2>
-                                <p className="mx-auto mt-3 max-w-lg leading-7 text-slate-600">
-                                    Quando um colaborador se cadastrar e salvar seus dados,
-                                    o perfil poderá aparecer aqui.
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="space-y-7">
-                                {profissionais.map((p, i) => {
-                                    const favorito = favoritos.includes(p.id);
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 sm:h-11 sm:w-11">
+                            <BriefcaseBusiness className="h-5 w-5 text-cyan-900" />
+                          </div>
 
-                                    return (
-                                        <article key={p.id ?? i} className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
-                                            <div className="flex flex-col gap-5 sm:flex-row sm:gap-7">
-                                                <div className="flex h-20 w-20 shrink-0 items-center justify-center self-start rounded-full bg-sky-200 text-3xl font-bold text-cyan-900 sm:h-24 sm:w-24">
-                                                    {p.nome?.trim().charAt(0).toUpperCase() || "?"}
-                                                </div>
+                          <h3 className="break-words text-base font-bold text-cyan-950 sm:text-lg">
+                            {servico.titulo || servico.nome || "Serviço"}
+                          </h3>
 
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex flex-col justify-between gap-4 xl:flex-row">
-                                                        <div>
-                                                            <h2 className="wrap-break-word text-xl font-bold text-slate-950 sm:text-2xl">
-                                                                {p.especialidade}
-                                                            </h2>
-                                                            <p className="mt-1 text-base text-slate-700 sm:text-lg">
-                                                                {p.nome}
-                                                            </p>
-                                                        </div>
+                        </div>
 
-                                                        <div className="flex shrink-0 items-center gap-3">
-                                                            <button onClick={() => window.alert("Mensagens estarão disponíveis em breve.")} className="flex items-center justify-center gap-2 rounded-full bg-amber-200 px-5 py-3 font-semibold text-amber-950 transition hover:bg-amber-300 sm:px-7">
-                                                                <MessageCircle className="h-5 w-5" />
-                                                                Conversar
-                                                            </button>
-                                                            <button
-                                                                onClick={() => alternarFavorito(p.id)}
-                                                                aria-label={favorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-                                                                aria-pressed={favorito}
-                                                                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-slate-200 transition hover:bg-rose-50"
-                                                            >
-                                                                <Heart className={`h-6 w-6 ${favorito ? "fill-red-500 text-red-500" : "text-slate-400"}`} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
+                        <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
+                          {servico.descricao || "Sem descrição disponível."}
+                        </p>
 
-                                                    <p className="mt-5 whitespace-pre-line wrap-break-word text-base leading-7 text-slate-700 sm:text-lg">
-                                                        {p.descricao}
-                                                    </p>
-
-                                                    <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-4 sm:p-5">
-                                                        <h3 className="mb-2 flex items-center gap-2 font-semibold text-slate-900">
-                                                            <Briefcase className="h-5 w-5 text-slate-500" />
-                                                            Experiência
-                                                        </h3>
-                                                        <p className="whitespace-pre-line wrap-break-word text-sm leading-6 text-slate-600 sm:text-base">
-                                                            {p.experiencia}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </article>
-                                    );
-                                })}
-                            </div>
+                        {servico.experiencia && (
+                          <p className="mt-3 break-words text-sm leading-6 text-slate-500">
+                            <strong>Experiência:</strong>{" "}
+                            {servico.experiencia}
+                          </p>
                         )}
-                    </section>
+                      </article>
+                    ))}
+
+                  </div>
+                )}
+
+              </section>
+
+              <section className="mt-9 sm:mt-12">
+
+                <div className="flex items-center gap-3">
+                  <Package className="h-5 w-5 shrink-0 text-cyan-900 sm:h-6 sm:w-6" />
+
+                  <h2 className="text-xl font-bold text-slate-950 sm:text-2xl">
+                    Seus Produtos
+                  </h2>
                 </div>
 
-                <footer className="py-6 text-center text-sm text-slate-500">
-                    © {ano ?? ""} EletroConnect. Todos os direitos reservados.
-                </footer>
+                {carregando ? (
+                  <p className="py-12 text-center text-sm text-slate-500 sm:py-16 sm:text-base">
+                    Carregando seus produtos...
+                  </p>
+                ) : produtos.length === 0 ? (
+                  <div className="py-10 text-center sm:py-14">
+                    <p className="text-base text-slate-500 sm:text-lg">
+                      Nenhum produto anunciado.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-5 grid grid-cols-1 gap-4 sm:mt-6 sm:grid-cols-2 sm:gap-5">
+
+                    {produtos.map((produto, index) => (
+                      <article
+                        key={produto.id ?? index}
+                        className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                      >
+                        {(produto.imagem || produto.imagem_url) && (
+                          <img
+                            src={produto.imagem || produto.imagem_url}
+                            alt={produto.nome || produto.titulo || "Produto"}
+                            className="h-44 w-full object-cover sm:h-48"
+                          />
+                        )}
+
+                        <div className="p-4 sm:p-6">
+
+                          <div className="flex min-w-0 items-center gap-3">
+
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 sm:h-11 sm:w-11">
+                              <Package className="h-5 w-5 text-cyan-900" />
+                            </div>
+
+                            <h3 className="break-words text-base font-bold text-cyan-950 sm:text-lg">
+                              {produto.nome || produto.titulo || "Produto"}
+                            </h3>
+
+                          </div>
+
+                          <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
+                            {produto.descricao || "Sem descrição disponível."}
+                          </p>
+
+                          {produto.categoria && (
+                            <p className="mt-2 break-words text-sm text-slate-500">
+                              Categoria: {produto.categoria}
+                            </p>
+                          )}
+
+                          {produto.preco !== undefined && (
+                            <p className="mt-4 break-words text-lg font-bold text-cyan-950">
+                              R$ {String(produto.preco)}
+                            </p>
+                          )}
+
+                        </div>
+                      </article>
+                    ))}
+
+                  </div>
+                )}
+
+              </section>
+
+              <div className="mt-8 flex justify-center sm:mt-10">
+                <button
+                  onClick={() => setAtualizar((n) => n + 1)}
+                  disabled={carregando}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-900 disabled:opacity-50 sm:w-auto sm:px-6 sm:text-base"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Atualizar informações
+                </button>
+              </div>
+
             </div>
-        </main>
-    );
+
+          </section>
+
+        </div>
+
+        <footer className="px-2 py-5 text-center text-xs text-slate-500 sm:py-6 sm:text-sm">
+          EletroConnect — Perfil do colaborador
+        </footer>
+
+      </div>
+
+    </main>
+  );
 }

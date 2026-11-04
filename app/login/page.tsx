@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -62,7 +63,7 @@ export default function LoginPage() {
                 );
             }
 
-            // O backend retorna apenas o 'token'
+            // O backend retorna apenas o token
             if (!dados.token) {
                 throw new Error("Token de autenticação não recebido do servidor.");
             }
@@ -70,19 +71,30 @@ export default function LoginPage() {
             // Salva o token JWT no localStorage
             localStorage.setItem("token", dados.token);
 
-            // Decodifica o Token JWT para ler os dados do usuário (id, email, tipo)
+            // Decodifica o token JWT
             const usuarioDecodificado: any = jwtDecode(dados.token);
 
-            const tipo = String(usuarioDecodificado.tipo || "").toLowerCase().trim();
+            const tipo = String(usuarioDecodificado.tipo || "")
+                .toLowerCase()
+                .trim();
 
-            const ehCliente = tipo.includes("cliente") || tipo.includes("client") || tipo === "1";
-            const ehColaborador = tipo.includes("colaborador") || tipo.includes("profissional") || tipo.includes("provider") || tipo.includes("prestador") || tipo === "2";
+            const ehCliente =
+                tipo.includes("cliente") ||
+                tipo.includes("client") ||
+                tipo === "1";
+
+            const ehColaborador =
+                tipo.includes("colaborador") ||
+                tipo.includes("profissional") ||
+                tipo.includes("provider") ||
+                tipo.includes("prestador") ||
+                tipo === "2";
 
             if (ehCliente) {
                 localStorage.setItem(
                     "usuarioLogado",
                     JSON.stringify({
-                        id: usuarioDecodificado.id, // ID extraído com sucesso do token (ex: 5)
+                        id: usuarioDecodificado.id,
                         email: usuarioDecodificado.email ?? email.trim(),
                         tipo: "cliente",
                     })
@@ -136,18 +148,19 @@ export default function LoginPage() {
     }
 
     return (
-        <main className="flex min-h-screen items-center justify-center bg-sky-50 p-4">
+        <main className="flex min-h-screen items-center justify-center bg-sky-50 px-3 py-6 sm:px-6 sm:py-8">
             <div className="w-full max-w-md overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-lg">
-                <header className="flex flex-col items-center bg-sky-200 px-6 py-8 text-center">
+
+                <header className="flex flex-col items-center bg-sky-200 px-4 py-6 text-center sm:px-6 sm:py-8">
                     <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-300 shadow-sm">
                         <Zap className="h-6 w-6 fill-amber-400 text-amber-950" />
                     </div>
 
-                    <h1 className="text-2xl font-bold text-cyan-950">
+                    <h1 className="text-2xl font-bold text-cyan-950 sm:text-3xl">
                         Voltare
                     </h1>
 
-                    <p className="mt-1 text-sm text-sky-900">
+                    <p className="mt-1 max-w-xs text-sm text-sky-900 sm:max-w-full">
                         Acesse sua conta na maior rede de eletrotécnica
                     </p>
                 </header>
@@ -163,13 +176,13 @@ export default function LoginPage() {
                     <button
                         type="button"
                         onClick={() => router.push("/cadastro")}
-                        className="w-1/2 py-3 text-sm font-semibold text-slate-400"
+                        className="w-1/2 py-3 text-sm font-semibold text-slate-400 transition-colors hover:text-slate-600"
                     >
                         Criar Conta
                     </button>
                 </div>
 
-                <form onSubmit={logar} className="p-6">
+                <form onSubmit={logar} className="p-4 sm:p-6">
                     <div className="mb-4">
                         <label
                             htmlFor="email"
@@ -185,7 +198,7 @@ export default function LoginPage() {
                             onChange={(e) => setEmail(e.target.value)}
                             autoComplete="email"
                             required
-                            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-sky-300"
+                            className="w-full min-w-0 rounded-lg border border-slate-200 p-3 text-sm outline-none transition-colors focus:border-sky-300 sm:p-2.5"
                         />
                     </div>
 
@@ -204,7 +217,7 @@ export default function LoginPage() {
                             onChange={(e) => setSenha(e.target.value)}
                             autoComplete="current-password"
                             required
-                            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-sky-300"
+                            className="w-full min-w-0 rounded-lg border border-slate-200 p-3 text-sm outline-none transition-colors focus:border-sky-300 sm:p-2.5"
                         />
                     </div>
 

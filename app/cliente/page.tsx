@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -113,36 +114,56 @@ export default function ClientePage() {
                 setCarregando(true);
                 setErro("");
 
-                // Pega o token salvo no login do localStorage
                 const token = localStorage.getItem("token");
 
                 if (!token) {
                     router.push("/login");
-                    throw new Error("Sessão não encontrada. Faça login novamente.");
+                    throw new Error(
+                        "Sessão não encontrada. Faça login novamente."
+                    );
                 }
 
                 const resposta = await fetch(`${API_URL}/servicos`, {
                     method: "GET",
                     headers: {
-                        "Accept": "application/json",
-                        "Authorization": `Bearer ${token}`
+                        Accept: "application/json",
+                        Authorization: `Bearer ${token}`,
                     },
                     cache: "no-store",
                     signal: controller.signal,
                 });
 
                 if (!resposta.ok) {
-                    if (resposta.status === 401 || resposta.status === 403) {
+                    const corpoErro = await resposta.text();
+
+                    console.error(
+                        `Erro do backend (${resposta.status}):`,
+                        corpoErro
+                    );
+
+                    if (
+                        resposta.status === 401 ||
+                        resposta.status === 403
+                    ) {
                         localStorage.removeItem("token");
                         localStorage.removeItem("usuarioLogado");
                         router.push("/login");
-                        throw new Error("Sessão expirada. Faça login novamente.");
+
+                        throw new Error(
+                            "Sessão expirada. Faça login novamente."
+                        );
                     }
-                    throw new Error(`Erro HTTP ${resposta.status}`);
+
+                    throw new Error(
+                        `Erro HTTP ${resposta.status}: ${
+                            corpoErro || "Falha ao carregar dados"
+                        }`
+                    );
                 }
 
                 const dados: unknown = await resposta.json();
                 setServicos(extrairLista(dados));
+
             } catch (error) {
                 if (
                     error instanceof Error &&
@@ -183,116 +204,140 @@ export default function ClientePage() {
     }
 
     return (
-        <main className="min-h-screen bg-sky-50 text-slate-800">
-            {/* Cabeçalho */}
-            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100 bg-white px-5 py-4 shadow-sm sm:px-10">
+        <main className="min-h-screen w-full overflow-x-hidden bg-sky-50 text-slate-800">
+
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100 bg-white px-4 py-3 shadow-sm sm:px-6 sm:py-4 lg:px-10">
+
                 <button
                     type="button"
                     onClick={() => router.push("/cliente")}
                     aria-label="Página inicial do cliente"
-                    className="flex items-center gap-3"
+                    className="flex min-w-0 items-center gap-2 sm:gap-3"
                 >
-                    <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-200">
-                        <Zap className="h-7 w-7 fill-amber-300 text-amber-950" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 sm:h-12 sm:w-12">
+                        <Zap className="h-6 w-6 fill-amber-300 text-amber-950 sm:h-7 sm:w-7" />
                     </span>
 
-                    <span className="text-xl font-bold text-cyan-900 sm:text-2xl">
+                    <span className="text-lg font-bold text-cyan-900 sm:text-2xl">
                         EletroConnect
                     </span>
                 </button>
 
-                <div className="flex items-center gap-3">
-                    <span className="text-sm text-slate-600 sm:text-base">
+                <div className="flex items-center gap-2 sm:gap-3">
+                    <span className="text-xs text-slate-600 sm:text-base">
                         Olá, Cliente
                     </span>
 
                     <button
                         type="button"
-                        onClick={() => router.push("/login")}
+                        onClick={() => {
+                            localStorage.removeItem("token");
+                            localStorage.removeItem("usuarioLogado");
+                            router.push("/login");
+                        }}
                         aria-label="Sair da conta"
                         title="Sair"
                         className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-cyan-900"
                     >
-                        <LogOut className="h-6 w-6" />
+                        <LogOut className="h-5 w-5 sm:h-6 sm:w-6" />
                     </button>
                 </div>
             </header>
 
-            <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-8 sm:py-10">
-                <div className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm">
-                    {/* Navegação */}
+           
+            <div className="mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+
+                <div className="overflow-hidden rounded-xl border border-sky-100 bg-white shadow-sm sm:rounded-2xl">
+
+                  
                     <nav className="grid grid-cols-2 border-b border-slate-200 sm:grid-cols-4">
+
                         {abas.map(({ nome, Icon, rota, ativo }) => (
                             <button
                                 key={nome}
                                 type="button"
                                 onClick={() => router.push(rota)}
                                 aria-current={ativo ? "page" : undefined}
-                                className={`flex min-h-17.5 items-center justify-center gap-2 px-3 py-4 text-sm transition sm:text-base ${
+                                className={`flex min-h-[65px] flex-col items-center justify-center gap-1 px-2 py-3 text-xs transition sm:min-h-[75px] sm:flex-row sm:gap-2 sm:px-3 sm:text-sm md:text-base ${
                                     ativo
                                         ? "bg-sky-200 font-semibold text-cyan-900"
                                         : "text-slate-600 hover:bg-sky-50"
                                 }`}
                             >
-                                <Icon className="h-6 w-6 shrink-0" />
-                                {nome}
+                                <Icon className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" />
+                                <span>{nome}</span>
                             </button>
                         ))}
+
                     </nav>
 
-                    {/* Lista de serviços publicados */}
-                    <section className="bg-slate-50/70 px-4 py-7 sm:px-8 sm:py-9">
-                        <p className="text-sm font-medium text-cyan-900">
-                            Rede profissional
-                        </p>
+                
+                    <section className="bg-slate-50/70 px-3 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-9">
 
-                        <h1 className="mb-7 mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">
-                            Serviços dos colaboradores
-                        </h1>
+                        <div className="mb-6 sm:mb-8">
+                            <p className="text-xs font-medium text-cyan-900 sm:text-sm">
+                                Rede profissional
+                            </p>
+
+                            <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">
+                                Serviços dos colaboradores
+                            </h1>
+                        </div>
 
                         {carregando ? (
-                            <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
-                                <p className="text-slate-600">
+                            <div className="rounded-xl border border-slate-200 bg-white px-4 py-10 text-center sm:rounded-2xl sm:px-6 sm:py-12">
+                                <p className="text-sm text-slate-600 sm:text-base">
                                     Carregando serviços...
                                 </p>
                             </div>
+
                         ) : erro ? (
-                            <div className="rounded-2xl border border-red-200 bg-white px-6 py-10 text-center">
-                                <h2 className="text-xl font-bold text-slate-900">
+
+                            <div className="rounded-xl border border-red-200 bg-white px-4 py-8 text-center sm:rounded-2xl sm:px-6 sm:py-10">
+
+                                <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
                                     Não foi possível carregar os serviços
                                 </h2>
 
-                                <p className="mt-3 warp-break-word text-sm text-red-700">
+                                <p className="mt-3 break-words text-sm text-red-700">
                                     {erro}
                                 </p>
 
                                 <button
                                     type="button"
                                     onClick={() => setAtualizar((n) => n + 1)}
-                                    className="mt-5 rounded-lg bg-cyan-950 px-6 py-3 font-semibold text-white transition hover:bg-cyan-900"
+                                    className="mt-5 w-full rounded-lg bg-cyan-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-cyan-900 sm:w-auto sm:text-base"
                                 >
                                     Tentar novamente
                                 </button>
                             </div>
-                        ) : servicos.length === 0 ? (
-                            <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
-                                <BriefcaseBusiness className="mx-auto mb-4 h-12 w-12 text-sky-700" />
 
-                                <h2 className="text-xl font-bold text-slate-900">
+                        ) : servicos.length === 0 ? (
+
+                            <div className="rounded-xl border border-slate-200 bg-white px-4 py-10 text-center sm:rounded-2xl sm:px-6 sm:py-12">
+
+                                <BriefcaseBusiness className="mx-auto mb-4 h-10 w-10 text-sky-700 sm:h-12 sm:w-12" />
+
+                                <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
                                     Nenhum serviço publicado
                                 </h2>
 
-                                <p className="mx-auto mt-3 max-w-lg leading-7 text-slate-600">
+                                <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-slate-600 sm:text-base">
                                     Quando os colaboradores publicarem serviços,
                                     eles aparecerão aqui.
                                 </p>
                             </div>
+
                         ) : (
-                            <div className="grid gap-5 lg:grid-cols-2">
+
+                            
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:gap-5">
+
                                 {servicos.map((servico, indice) => {
                                     const chave = String(
                                         servico.id ?? `servico-${indice}`
                                     );
+
                                     const favorito = favoritos.includes(chave);
                                     const autor = nomeDoColaborador(servico);
                                     const titulo =
@@ -303,22 +348,28 @@ export default function ClientePage() {
                                     return (
                                         <article
                                             key={chave}
-                                            className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7"
+                                            className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:rounded-2xl sm:p-6 lg:p-7"
                                         >
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="flex min-w-0 items-center gap-3">
-                                                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-sky-200 text-xl font-bold text-cyan-900">
+
+                                            
+                                            <div className="flex items-start justify-between gap-3">
+
+                                                <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+
+                                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-200 text-lg font-bold text-cyan-900 sm:h-14 sm:w-14 sm:text-xl">
                                                         {autor.trim().charAt(0).toUpperCase() || "C"}
                                                     </div>
 
                                                     <div className="min-w-0">
-                                                        <h2 className="wrap-break-word reak-words font-bold text-slate-950">
+                                                        <h2 className="break-words text-sm font-bold text-slate-950 sm:text-base">
                                                             {autor}
                                                         </h2>
-                                                        <p className="text-sm text-slate-500">
+
+                                                        <p className="text-xs text-slate-500 sm:text-sm">
                                                             Colaborador
                                                         </p>
                                                     </div>
+
                                                 </div>
 
                                                 <button
@@ -330,7 +381,7 @@ export default function ClientePage() {
                                                             : "Adicionar aos favoritos"
                                                     }
                                                     aria-pressed={favorito}
-                                                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 transition hover:bg-rose-50"
+                                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 transition hover:bg-rose-50 sm:h-11 sm:w-11"
                                                 >
                                                     <Heart
                                                         className={`h-5 w-5 ${
@@ -340,54 +391,67 @@ export default function ClientePage() {
                                                         }`}
                                                     />
                                                 </button>
+
                                             </div>
 
-                                            <h3 className="mt-5 wrap-break-word text-lg font-semibold text-cyan-950">
+                                            
+                                            <h3 className="mt-5 break-words text-base font-semibold text-cyan-950 sm:text-lg">
                                                 {titulo}
                                             </h3>
 
+                                            
                                             {servico.categoria && (
-                                                <p className="mt-1 text-sm text-cyan-800">
+                                                <p className="mt-1 break-words text-xs text-cyan-800 sm:text-sm">
                                                     {servico.categoria}
                                                 </p>
                                             )}
 
-                                            <p className="mt-3 whitespace-pre-line wrap-break-word leading-7 text-slate-600">
+                                            
+                                            <p className="mt-3 whitespace-pre-line break-words text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
                                                 {servico.descricao || "Sem descrição."}
                                             </p>
 
+                                            
                                             {servico.experiencia && (
-                                                <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-4">
-                                                    <h4 className="mb-2 flex items-center gap-2 font-semibold text-slate-900">
-                                                        <Briefcase className="h-5 w-5 text-slate-500" />
+                                                <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
+
+                                                    <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900 sm:text-base">
+                                                        <Briefcase className="h-5 w-5 shrink-0 text-slate-500" />
                                                         Experiência
                                                     </h4>
 
-                                                    <p className="whitespace-pre-line wrap-break-word text-sm leading-6 text-slate-600">
+                                                    <p className="whitespace-pre-line break-words text-xs leading-6 text-slate-600 sm:text-sm">
                                                         {servico.experiencia}
                                                     </p>
+
                                                 </div>
                                             )}
 
+                                            
                                             <button
                                                 type="button"
                                                 onClick={() => router.push("/cliente/mensagens")}
-                                                className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-amber-200 px-5 py-3 font-semibold text-amber-950 transition hover:bg-amber-300"
+                                                className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-amber-200 px-4 py-3 text-sm font-semibold text-amber-950 transition hover:bg-amber-300 sm:text-base"
                                             >
-                                                <MessageCircle className="h-5 w-5" />
+                                                <MessageCircle className="h-5 w-5 shrink-0" />
                                                 Conversar
                                             </button>
+
                                         </article>
                                     );
                                 })}
+
                             </div>
                         )}
+
                     </section>
                 </div>
 
-                <footer className="py-6 text-center text-sm text-slate-500">
+                
+                <footer className="px-2 py-5 text-center text-xs text-slate-500 sm:py-6 sm:text-sm">
                     © {ano ?? ""} EletroConnect. Todos os direitos reservados.
                 </footer>
+
             </div>
         </main>
     );

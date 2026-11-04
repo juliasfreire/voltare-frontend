@@ -1,3 +1,4 @@
+
 "use client";
 
 //Julinha esteve aqui
@@ -20,7 +21,7 @@ export default function CadastroPage() {
     const [tipo, setTipo] = useState<"cliente" | "prestador">("cliente");
     const [carregando, setCarregando] = useState(false);
 
-    async function cadastrar(e:any) {
+    async function cadastrar(e: any) {
         e.preventDefault();
 
         if (!nome.trim() || !email.trim() || !senha) {
@@ -102,26 +103,28 @@ export default function CadastroPage() {
     }
 
     return (
-        <main className="flex min-h-screen items-center justify-center bg-sky-50 p-4">
+        <main className="flex min-h-screen items-center justify-center bg-sky-50 px-3 py-6 sm:px-6 sm:py-8">
+
             <div className="w-full max-w-md overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-lg">
 
-                {/* Cabeçalho no mesmo estilo do login */}
-                <header className="flex flex-col items-center bg-sky-200 px-6 py-8 text-center">
+                <header className="flex flex-col items-center bg-sky-200 px-4 py-6 text-center sm:px-6 sm:py-8">
+
                     <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-300 shadow-sm">
                         <Zap className="h-6 w-6 fill-amber-400 text-amber-950" />
                     </div>
 
-                    <h1 className="text-2xl font-bold text-cyan-950">
+                    <h1 className="text-2xl font-bold text-cyan-950 sm:text-3xl">
                         Voltare
                     </h1>
 
-                    <p className="mt-1 text-sm text-sky-900">
+                    <p className="mt-1 max-w-xs text-xs leading-5 text-sky-900 sm:text-sm">
                         Crie sua conta na maior rede de eletrotécnica
                     </p>
+
                 </header>
 
-                {/* Abas */}
                 <div className="flex border-b border-slate-100 text-center">
+
                     <button
                         type="button"
                         onClick={() => router.push("/login")}
@@ -137,11 +140,13 @@ export default function CadastroPage() {
                     >
                         Criar Conta
                     </button>
+
                 </div>
 
-                {/* Formulário */}
-                <form onSubmit={cadastrar} className="p-6">
+                <form onSubmit={cadastrar} className="p-4 sm:p-6">
+
                     <div className="mb-4">
+
                         <label
                             htmlFor="nome"
                             className="mb-1 block text-sm font-medium text-slate-700"
@@ -159,11 +164,13 @@ export default function CadastroPage() {
                             placeholder="Digite seu nome"
                             maxLength={120}
                             required
-                            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none transition focus:border-sky-300"
+                            className="w-full min-w-0 rounded-lg border border-slate-200 p-3 text-sm outline-none transition focus:border-sky-300 sm:p-2.5"
                         />
+
                     </div>
 
                     <div className="mb-4">
+
                         <label
                             htmlFor="email"
                             className="mb-1 block text-sm font-medium text-slate-700"
@@ -181,11 +188,13 @@ export default function CadastroPage() {
                             placeholder="seuemail@exemplo.com"
                             maxLength={180}
                             required
-                            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none transition focus:border-sky-300"
+                            className="w-full min-w-0 rounded-lg border border-slate-200 p-3 text-sm outline-none transition focus:border-sky-300 sm:p-2.5"
                         />
+
                     </div>
 
                     <div className="mb-5">
+
                         <label
                             htmlFor="senha"
                             className="mb-1 block text-sm font-medium text-slate-700"
@@ -203,23 +212,25 @@ export default function CadastroPage() {
                             placeholder="Crie uma senha"
                             minLength={6}
                             required
-                            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none transition focus:border-sky-300"
+                            className="w-full min-w-0 rounded-lg border border-slate-200 p-3 text-sm outline-none transition focus:border-sky-300 sm:p-2.5"
                         />
 
                         <p className="mt-1 text-xs text-slate-500">
                             Use pelo menos 6 caracteres.
                         </p>
+
                     </div>
 
-                    {/* Tipo de conta */}
                     <fieldset className="mb-6">
+
                         <legend className="mb-2 block text-sm font-medium text-slate-700">
                             Tipo de conta
                         </legend>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+
                             <label
-                                className={`cursor-pointer rounded-lg border p-3 text-center transition ${
+                                className={`cursor-pointer rounded-lg border p-2.5 text-center transition sm:p-3 ${
                                     tipo === "cliente"
                                         ? "border-sky-300 bg-sky-50"
                                         : "border-slate-200 hover:bg-slate-50"
@@ -237,13 +248,15 @@ export default function CadastroPage() {
                                 <span className="block text-sm font-semibold text-slate-800">
                                     Cliente
                                 </span>
+
                                 <span className="mt-1 block text-xs text-slate-500">
                                     Procurar serviços
                                 </span>
+
                             </label>
 
                             <label
-                                className={`cursor-pointer rounded-lg border p-3 text-center transition ${
+                                className={`cursor-pointer rounded-lg border p-2.5 text-center transition sm:p-3 ${
                                     tipo === "prestador"
                                         ? "border-sky-300 bg-sky-50"
                                         : "border-slate-200 hover:bg-slate-50"
@@ -261,22 +274,29 @@ export default function CadastroPage() {
                                 <span className="block text-sm font-semibold text-slate-800">
                                     Colaborador
                                 </span>
+
                                 <span className="mt-1 block text-xs text-slate-500">
                                     Publicar serviços
                                 </span>
+
                             </label>
+
                         </div>
+
                     </fieldset>
 
                     <button
                         type="submit"
                         disabled={carregando}
-                        className="w-full cursor-pointer rounded-lg bg-cyan-950 py-3 text-sm font-semibold text-white transition-colors hover:bg-cyan-900 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="w-full cursor-pointer rounded-lg bg-cyan-950 py-3 text-sm font-semibold text-white transition-colors hover:bg-cyan-900 disabled:cursor-not-allowed disabled:opacity-60 sm:text-base"
                     >
                         {carregando ? "Cadastrando..." : "Criar conta"}
                     </button>
+
                 </form>
+
             </div>
+
         </main>
     );
 }
