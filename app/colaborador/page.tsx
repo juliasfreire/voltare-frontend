@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     Zap,
@@ -149,7 +149,7 @@ export default function ColaboradorPage() {
         return () => ctrl.abort();
     }, [atualizar, router]);
 
-    async function cadastrar(e: FormEvent<HTMLFormElement>) {
+    async function cadastrar(e:any) {
         e.preventDefault();
         setSalvando(true);
         setErroCadastro("");
@@ -354,7 +354,7 @@ export default function ColaboradorPage() {
                                     </p>
                                 ) : erro ? (
                                     <div className="mt-5 rounded-xl bg-white p-4 shadow-sm sm:mt-6 sm:p-6">
-                                        <p className="break-words text-sm text-red-700 sm:text-base">
+                                        <p className="wrap-break-word text-sm text-red-700 sm:text-base">
                                             {erro}
                                         </p>
 
@@ -378,20 +378,20 @@ export default function ColaboradorPage() {
                                                 key={s.id ?? i}
                                                 className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-6"
                                             >
-                                                <h3 className="break-words font-bold text-slate-950">
+                                                <h3 className="wrap-break-word font-bold text-slate-950">
                                                     {autor(s)}
                                                 </h3>
 
-                                                <h4 className="mt-3 break-words text-base font-semibold text-cyan-950 sm:text-lg">
+                                                <h4 className="mt-3 wrap-break-word text-base font-semibold text-cyan-950 sm:text-lg">
                                                     {s.titulo || s.nome || "Serviço"}
                                                 </h4>
 
-                                                <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
+                                                <p className="mt-3 whitespace-pre-wrap wrap-break-word text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
                                                     {s.descricao || "Sem descrição."}
                                                 </p>
 
                                                 {s.experiencia && (
-                                                    <p className="mt-3 break-words text-sm leading-6 text-slate-600">
+                                                    <p className="mt-3 wrap-break-word text-sm leading-6 text-slate-600">
                                                         <strong>Experiência:</strong>{" "}
                                                         {s.experiencia}
                                                     </p>
@@ -491,7 +491,7 @@ export default function ColaboradorPage() {
                             {erroCadastro && (
                                 <p
                                     role="alert"
-                                    className="break-words text-sm text-red-700"
+                                    className="wrap-break-word text-sm text-red-700"
                                 >
                                     {erroCadastro}
                                 </p>

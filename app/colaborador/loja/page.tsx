@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ContactButton from "@/components/ContactButton";
 import {
     ArrowLeft,
     ShoppingBag,
@@ -25,7 +26,11 @@ type Produto = {
     valor?: number | string;
     imagem?: string;
     imagemUrl?: string;
-    colaborador?: string | { nome?: string };
+    // Adicione estes campos para suportar o ID do colaborador/vendedor:
+    colaboradorId?: number | string;
+    colaborador_id?: number | string;
+    colaborador?: string | { id?: number | string; nome?: string };
+    id_prestador?: number | string;
     nomeColaborador?: string;
     prestador_nome?: string;
 };
@@ -227,7 +232,7 @@ export default function LojaPage() {
                     </h2>
 
                     {carregando && (
-                        <div className="flex min-h-[180px] flex-col items-center justify-center rounded-xl border border-sky-100 bg-white p-6 text-center">
+                        <div className="flex min-h-45 flex-col items-center justify-center rounded-xl border border-sky-100 bg-white p-6 text-center">
                             <RefreshCw className="mb-3 h-8 w-8 animate-spin text-cyan-800" />
 
                             <p className="text-sm text-slate-500 sm:text-base">
@@ -257,7 +262,7 @@ export default function LojaPage() {
                     )}
 
                     {!carregando && !erro && produtos.length === 0 && (
-                        <div className="flex min-h-[220px] flex-col items-center justify-center rounded-xl border border-sky-100 bg-white px-5 py-8 text-center">
+                        <div className="flex min-h-55 flex-col items-center justify-center rounded-xl border border-sky-100 bg-white px-5 py-8 text-center">
 
                             <Package className="mb-3 h-12 w-12 text-slate-300" />
 
@@ -313,12 +318,12 @@ export default function LojaPage() {
                                         {/* INFORMAÇÕES */}
                                         <div className="flex flex-1 flex-col p-5">
 
-                                            <h3 className="break-words text-lg font-bold text-slate-900">
+                                            <h3 className="wrap-break-word text-lg font-bold text-slate-900">
                                                 {nome}
                                             </h3>
 
                                             {produto.descricao && (
-                                                <p className="mt-2 break-words text-sm leading-6 text-slate-600">
+                                                <p className="mt-2 wrap-break-word text-sm leading-6 text-slate-600">
                                                     {produto.descricao}
                                                 </p>
                                             )}
@@ -335,14 +340,12 @@ export default function LojaPage() {
                                             )}
 
                                             {/* CONVERSAR COM VENDEDOR */}
-                                            <button
-                                                type="button"
-                                                onClick={() => router.push(rotaMensagens)}
+                                            <ContactButton 
+                                                colaboradorId={produto.id_prestador || ""} 
+                                                produtoId={produto.id}
+                                                buttonText="Conversar com vendedor"
                                                 className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-800 sm:text-base"
-                                            >
-                                                <MessageCircle className="h-5 w-5" />
-                                                Conversar com vendedor
-                                            </button>
+                                            />
 
                                         </div>
 

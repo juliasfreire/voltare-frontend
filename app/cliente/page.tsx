@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ContactButton from "@/components/ContactButton";
 import {
     Zap,
     LogOut,
@@ -22,6 +23,7 @@ type Servico = {
     experiencia?: string;
     categoria?: string;
     prestador_nome?: string;
+    prestador_id?: number | string;
     nomeColaborador?: string;
     nomeProfissional?: string;
     colaborador?: string | {
@@ -258,7 +260,7 @@ export default function ClientePage() {
                                 type="button"
                                 onClick={() => router.push(rota)}
                                 aria-current={ativo ? "page" : undefined}
-                                className={`flex min-h-[65px] flex-col items-center justify-center gap-1 px-2 py-3 text-xs transition sm:min-h-[75px] sm:flex-row sm:gap-2 sm:px-3 sm:text-sm md:text-base ${
+                                className={`flex min-h-16.25 flex-col items-center justify-center gap-1 px-2 py-3 text-xs transition sm:min-h-18.75 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm md:text-base ${
                                     ativo
                                         ? "bg-sky-200 font-semibold text-cyan-900"
                                         : "text-slate-600 hover:bg-sky-50"
@@ -299,7 +301,7 @@ export default function ClientePage() {
                                     Não foi possível carregar os serviços
                                 </h2>
 
-                                <p className="mt-3 break-words text-sm text-red-700">
+                                <p className="mt-3 wrap-break-word text-sm text-red-700">
                                     {erro}
                                 </p>
 
@@ -361,7 +363,7 @@ export default function ClientePage() {
                                                     </div>
 
                                                     <div className="min-w-0">
-                                                        <h2 className="break-words text-sm font-bold text-slate-950 sm:text-base">
+                                                        <h2 className="wrap-break-word text-sm font-bold text-slate-950 sm:text-base">
                                                             {autor}
                                                         </h2>
 
@@ -395,19 +397,19 @@ export default function ClientePage() {
                                             </div>
 
                                             
-                                            <h3 className="mt-5 break-words text-base font-semibold text-cyan-950 sm:text-lg">
+                                            <h3 className="mt-5 wrap-break-word text-base font-semibold text-cyan-950 sm:text-lg">
                                                 {titulo}
                                             </h3>
 
                                             
                                             {servico.categoria && (
-                                                <p className="mt-1 break-words text-xs text-cyan-800 sm:text-sm">
+                                                <p className="mt-1 wrap-break-word text-xs text-cyan-800 sm:text-sm">
                                                     {servico.categoria}
                                                 </p>
                                             )}
 
                                             
-                                            <p className="mt-3 whitespace-pre-line break-words text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
+                                            <p className="mt-3 whitespace-pre-line wrap-break-word text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
                                                 {servico.descricao || "Sem descrição."}
                                             </p>
 
@@ -420,14 +422,14 @@ export default function ClientePage() {
                                                         Experiência
                                                     </h4>
 
-                                                    <p className="whitespace-pre-line break-words text-xs leading-6 text-slate-600 sm:text-sm">
+                                                    <p className="whitespace-pre-line wrap-break-word text-xs leading-6 text-slate-600 sm:text-sm">
                                                         {servico.experiencia}
                                                     </p>
 
                                                 </div>
                                             )}
 
-                                            
+                                            {/*
                                             <button
                                                 type="button"
                                                 onClick={() => router.push("/cliente/mensagens")}
@@ -435,7 +437,16 @@ export default function ClientePage() {
                                             >
                                                 <MessageCircle className="h-5 w-5 shrink-0" />
                                                 Conversar
-                                            </button>
+                                            </button> */}
+
+                                            {/* CONVERSAR COM VENDEDOR */}
+                                            <ContactButton 
+                                                // CORREÇÃO: Usando a coluna real que vem do seu banco de dados (prestador_id)
+                                                colaboradorId={servico.prestador_id || ""} 
+                                                servicoId={servico.id}
+                                                buttonText="Conversar"
+                                                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-200 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-300 sm:text-base"
+                                            />
 
                                         </article>
                                     );

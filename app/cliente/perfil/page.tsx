@@ -18,7 +18,7 @@ export default function PerfilClientePage() {
     return (
         <main className="min-h-screen w-full overflow-x-hidden bg-sky-50 text-slate-800">
 
-            <header className="flex min-h-[76px] w-full flex-col items-center justify-between gap-3 border-b border-sky-100 bg-white px-4 py-4 shadow-sm sm:flex-row sm:px-6 md:px-10">
+            <header className="flex min-h-19 w-full flex-col items-center justify-between gap-3 border-b border-sky-100 bg-white px-4 py-4 shadow-sm sm:flex-row sm:px-6 md:px-10">
 
                 <button
                     type="button"
@@ -62,7 +62,7 @@ export default function PerfilClientePage() {
                         <button
                             type="button"
                             onClick={() => router.push("/cliente")}
-                            className="flex min-h-[65px] items-center justify-center gap-2 px-2 py-3 text-xs text-slate-600 transition hover:bg-sky-50 sm:min-h-[70px] sm:px-3 sm:text-sm md:text-base"
+                            className="flex min-h-16.25 items-center justify-center gap-2 px-2 py-3 text-xs text-slate-600 transition hover:bg-sky-50 sm:min-h-17.5 sm:px-3 sm:text-sm md:text-base"
                         >
                             <BriefcaseBusiness className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" />
                             <span>Profissionais</span>
@@ -71,7 +71,7 @@ export default function PerfilClientePage() {
                         <button
                             type="button"
                             onClick={() => router.push("/cliente/loja")}
-                            className="flex min-h-[65px] items-center justify-center gap-2 px-2 py-3 text-xs text-slate-600 transition hover:bg-sky-50 sm:min-h-[70px] sm:px-3 sm:text-sm md:text-base"
+                            className="flex min-h-16.25 items-center justify-center gap-2 px-2 py-3 text-xs text-slate-600 transition hover:bg-sky-50 sm:min-h-17.5 sm:px-3 sm:text-sm md:text-base"
                         >
                             <ShoppingCart className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" />
                             <span>Loja</span>
@@ -80,7 +80,7 @@ export default function PerfilClientePage() {
                         <button
                             type="button"
                             onClick={() => router.push("/cliente/mensagens")}
-                            className="flex min-h-[65px] items-center justify-center gap-2 px-2 py-3 text-xs text-slate-600 transition hover:bg-sky-50 sm:min-h-[70px] sm:px-3 sm:text-sm md:text-base"
+                            className="flex min-h-16.25 items-center justify-center gap-2 px-2 py-3 text-xs text-slate-600 transition hover:bg-sky-50 sm:min-h-17.5 sm:px-3 sm:text-sm md:text-base"
                         >
                             <MessageCircle className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" />
                             <span>Mensagens</span>
@@ -89,7 +89,7 @@ export default function PerfilClientePage() {
                         <button
                             type="button"
                             aria-current="page"
-                            className="flex min-h-[65px] items-center justify-center gap-2 border-b-2 border-sky-300 bg-sky-200 px-2 py-3 text-xs font-semibold text-cyan-900 sm:min-h-[70px] sm:px-3 sm:text-sm md:text-base"
+                            className="flex min-h-16.25 items-center justify-center gap-2 border-b-2 border-sky-300 bg-sky-200 px-2 py-3 text-xs font-semibold text-cyan-900 sm:min-h-17.5 sm:px-3 sm:text-sm md:text-base"
                         >
                             <UserCircle className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" />
                             <span>Perfil</span>
@@ -115,7 +115,7 @@ export default function PerfilClientePage() {
 
                                 <div className="w-full min-w-0 flex-1 text-center sm:text-left">
 
-                                    <h2 className="break-words text-xl font-bold text-slate-950 sm:text-2xl">
+                                    <h2 className="wrap-break-word text-xl font-bold text-slate-950 sm:text-2xl">
                                         Nome do Cliente
                                     </h2>
 
@@ -139,7 +139,7 @@ export default function PerfilClientePage() {
                                     <span>Profissionais Favoritos</span>
                                 </h2>
 
-                                <div className="flex min-h-[150px] flex-col items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-7 text-center sm:rounded-2xl sm:px-5 sm:py-8">
+                                <div className="flex min-h-37.5 flex-col items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-7 text-center sm:rounded-2xl sm:px-5 sm:py-8">
 
                                     <Heart className="mb-3 h-9 w-9 text-slate-300" />
 
