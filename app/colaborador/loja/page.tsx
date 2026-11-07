@@ -359,7 +359,7 @@ export default function LojaPage() {
                 </section>
 
                 <footer className="py-7 text-center text-xs text-slate-500 sm:text-sm">
-                    © EletroConnect. Todos os direitos reservados.
+                    © Voltare. Todos os direitos reservados.
                 </footer>
 
             </div>

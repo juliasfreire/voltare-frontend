@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
     Zap,
@@ -14,6 +14,7 @@ import {
     Package,
     Plus,
     X,
+    ChevronDown,
 } from "lucide-react";
 
 type Servico = {
@@ -28,6 +29,13 @@ type Servico = {
     colaborador?: string | { nome?: string; username?: string };
 };
 
+type Usuario = {
+    nome?: string;
+    email?: string;
+    tipo?: string;
+    id?: number | string;
+};
+
 const API = (
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 ).replace(/\/$/, "");
@@ -37,7 +45,7 @@ function lista(dados: unknown): Servico[] {
 
     if (dados && typeof dados === "object") {
         const d = dados as Record<string, unknown>;
-        const itens = d.content ?? d.servicos ?? d.data;
+        const itens = d.content ?? d.servicos ?? d.data ?? d.produtos;
 
         if (Array.isArray(itens)) return itens as Servico[];
     }
@@ -58,22 +66,69 @@ function autor(s: Servico): string {
     );
 }
 
+function converterParaBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+    });
+}
+
 export default function ColaboradorPage() {
     const router = useRouter();
 
+    const [usuario, setUsuario] = useState<Usuario | null>(null);
+
+    // Ano atual para o rodapé.
+    const [ano, setAno] = useState<number | null>(null);
+
     const [servicos, setServicos] = useState<Servico[]>([]);
     const [meus, setMeus] = useState<Servico[]>([]);
+    const [quantidadeProdutos, setQuantidadeProdutos] = useState(0);
+
     const [carregando, setCarregando] = useState(true);
     const [erro, setErro] = useState("");
     const [atualizar, setAtualizar] = useState(0);
 
-    const [modal, setModal] = useState(false);
+    const [menuAberto, setMenuAberto] = useState(false);
+    const [modal, setModal] = useState<"servico" | "produto" | null>(null);
+
     const [nome, setNome] = useState("");
     const [experiencia, setExperiencia] = useState("");
     const [descricao, setDescricao] = useState("");
+
+    const [nomeProduto, setNomeProduto] = useState("");
+    const [precoProduto, setPrecoProduto] = useState("");
+    const [descricaoProduto, setDescricaoProduto] = useState("");
+    const [imagemProduto, setImagemProduto] = useState<File | null>(null);
+
     const [salvando, setSalvando] = useState(false);
     const [erroCadastro, setErroCadastro] = useState("");
 
+    // Define o ano atual após a montagem da página.
+    useEffect(() => {
+        setAno(new Date().getFullYear());
+    }, []);
+
+    // Recupera o nome do usuário assim que a página abre.
+    useEffect(() => {
+        const usuarioSalvo = localStorage.getItem("usuarioLogado");
+
+        if (!usuarioSalvo) {
+            router.push("/login");
+            return;
+        }
+
+        try {
+            const dadosUsuario = JSON.parse(usuarioSalvo) as Usuario;
+            setUsuario(dadosUsuario);
+        } catch (erro) {
+            console.error("Erro ao recuperar usuário:", erro);
+        }
+    }, [router]);
+
+    // Carrega serviços e produtos.
     useEffect(() => {
         const ctrl = new AbortController();
 
@@ -128,8 +183,30 @@ export default function ColaboradorPage() {
                     if (resposta.ok) {
                         setMeus(lista(await resposta.json()));
                     }
-                } catch {
-                    // Trata silenciosamente se a rota falhar.
+                } catch (e) {
+                    if (e instanceof Error && e.name === "AbortError") {
+                        return;
+                    }
+                }
+
+                try {
+                    const respostaProdutos = await fetch(
+                        `${API}/produtos/meus`,
+                        {
+                            headers: headersAuth,
+                            cache: "no-store",
+                            signal: ctrl.signal,
+                        }
+                    );
+
+                    if (respostaProdutos.ok) {
+                        const dadosProdutos = await respostaProdutos.json();
+                        setQuantidadeProdutos(lista(dadosProdutos).length);
+                    }
+                } catch (e) {
+                    if (e instanceof Error && e.name === "AbortError") {
+                        return;
+                    }
                 }
             } catch (e) {
                 if (e instanceof Error && e.name === "AbortError") return;
@@ -137,7 +214,7 @@ export default function ColaboradorPage() {
                 setErro(
                     e instanceof Error
                         ? e.message
-                        : "Não foi possível carregar os serviços."
+                        : "Não foi possível carregar os dados."
                 );
             } finally {
                 if (!ctrl.signal.aborted) setCarregando(false);
@@ -149,22 +226,38 @@ export default function ColaboradorPage() {
         return () => ctrl.abort();
     }, [atualizar, router]);
 
-    async function cadastrar(e:any) {
+    function abrirServico() {
+        setMenuAberto(false);
+        setErroCadastro("");
+        setModal("servico");
+    }
+
+    function abrirProduto() {
+        setMenuAberto(false);
+        setErroCadastro("");
+        setModal("produto");
+    }
+
+    async function cadastrarServico(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
+
         setSalvando(true);
         setErroCadastro("");
 
         try {
             const token = localStorage.getItem("token");
 
+            if (!token) {
+                router.push("/login");
+                throw new Error("Faça login para publicar um serviço.");
+            }
+
             const r = await fetch(`${API}/servicos`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     Accept: "application/json",
-                    ...(token
-                        ? { Authorization: `Bearer ${token}` }
-                        : {}),
+                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     nome: nome.trim(),
@@ -179,15 +272,16 @@ export default function ColaboradorPage() {
 
                 throw new Error(
                     dadosErro.mensagem ||
-                    dadosErro.message ||
-                    `Erro HTTP ${r.status}`
+                        dadosErro.message ||
+                        `Erro HTTP ${r.status}`
                 );
             }
 
-            setModal(false);
+            setModal(null);
             setNome("");
             setExperiencia("");
             setDescricao("");
+
             setAtualizar((n) => n + 1);
         } catch (e) {
             setErroCadastro(
@@ -198,6 +292,82 @@ export default function ColaboradorPage() {
         } finally {
             setSalvando(false);
         }
+    }
+
+    async function cadastrarProduto(e: FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+
+        setSalvando(true);
+        setErroCadastro("");
+
+        try {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                router.push("/login");
+                throw new Error("Faça login para publicar um produto.");
+            }
+
+            if (!imagemProduto) {
+                throw new Error("Selecione uma imagem para o produto.");
+            }
+
+            const imagemBase64 = await converterParaBase64(imagemProduto);
+
+            const r = await fetch(`${API}/produtos`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    nome: nomeProduto.trim(),
+                    preco: Number(precoProduto),
+                    descricao: descricaoProduto.trim(),
+                    imagem: imagemBase64,
+                }),
+            });
+
+            if (!r.ok) {
+                const dadosErro = await r.json().catch(() => ({}));
+
+                throw new Error(
+                    dadosErro.mensagem ||
+                        dadosErro.message ||
+                        `Erro HTTP ${r.status}`
+                );
+            }
+
+            setModal(null);
+            setNomeProduto("");
+            setPrecoProduto("");
+            setDescricaoProduto("");
+            setImagemProduto(null);
+
+            setAtualizar((n) => n + 1);
+        } catch (e) {
+            setErroCadastro(
+                e instanceof Error
+                    ? e.message
+                    : "Erro ao cadastrar produto."
+            );
+        } finally {
+            setSalvando(false);
+        }
+    }
+
+    function fecharModal() {
+        if (salvando) return;
+
+        setModal(null);
+        setErroCadastro("");
+    }
+
+    function sair() {
+        localStorage.removeItem("token");
+        localStorage.removeItem("usuarioLogado");
+        router.push("/login");
     }
 
     const abas = [
@@ -225,9 +395,9 @@ export default function ColaboradorPage() {
 
     return (
         <main className="min-h-screen overflow-x-hidden bg-sky-50 text-slate-800">
-
             <header className="flex items-center justify-between gap-3 border-b border-sky-100 bg-white px-4 py-3 shadow-sm sm:px-6 sm:py-4 lg:px-10">
                 <button
+                    type="button"
                     onClick={() => router.push("/colaborador")}
                     className="flex min-w-0 items-center gap-2 sm:gap-3"
                 >
@@ -236,27 +406,34 @@ export default function ColaboradorPage() {
                     </span>
 
                     <span className="truncate text-lg font-bold text-cyan-900 sm:text-2xl">
-                        EletroConnect
+                        Voltare
                     </span>
                 </button>
 
-                <button
-                    onClick={() => router.push("/login")}
-                    aria-label="Sair"
-                    className="shrink-0 rounded-lg p-2 text-slate-500 transition hover:bg-slate-100"
-                >
-                    <LogOut className="h-5 w-5 sm:h-6 sm:w-6" />
-                </button>
+                <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-4">
+                    <span className="max-w-[180px] truncate text-sm text-slate-600 sm:max-w-none sm:text-base">
+                        Olá, {usuario?.nome || "Colaborador"}
+                    </span>
+
+                    <button
+                        type="button"
+                        onClick={sair}
+                        aria-label="Sair da conta"
+                        title="Sair"
+                        className="shrink-0 rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-cyan-900"
+                    >
+                        <LogOut className="h-5 w-5 sm:h-6 sm:w-6" />
+                    </button>
+                </div>
             </header>
 
             <div className="mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-
                 <div className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm">
-
                     <nav className="grid grid-cols-2 border-b border-slate-200 sm:grid-cols-4">
                         {abas.map(({ nome: aba, Icon, acao }, i) => (
                             <button
                                 key={aba}
+                                type="button"
                                 onClick={acao}
                                 className={`flex min-h-14 items-center justify-center gap-2 px-2 py-3 text-sm transition sm:min-h-16 sm:px-3 sm:py-4 sm:text-base ${
                                     i === 0
@@ -272,7 +449,6 @@ export default function ColaboradorPage() {
 
                     <section className="bg-slate-50/70 px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
                         <div className="mx-auto max-w-6xl">
-
                             <div className="flex flex-col gap-5 rounded-2xl bg-sky-200 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:rounded-3xl sm:p-8 lg:p-10">
                                 <div className="min-w-0">
                                     <p className="text-sm font-semibold text-cyan-900 sm:text-base">
@@ -289,19 +465,49 @@ export default function ColaboradorPage() {
                                     </p>
                                 </div>
 
-                                <button
-                                    onClick={() => {
-                                        setErroCadastro("");
-                                        setModal(true);
-                                    }}
-                                    aria-label="Publicar serviço"
-                                    className="flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-200 text-amber-950 shadow-md transition hover:bg-amber-300 sm:h-14 sm:w-14 sm:rounded-full"
-                                >
-                                    <Plus className="h-6 w-6 sm:h-8 sm:w-8" />
-                                    <span className="font-semibold sm:hidden">
-                                        Publicar serviço
-                                    </span>
-                                </button>
+                                <div className="group relative z-20 w-full shrink-0 sm:w-auto">
+                                    <button
+                                        type="button"
+                                        onClick={() => setMenuAberto((v) => !v)}
+                                        aria-label="Escolher o que publicar"
+                                        aria-expanded={menuAberto}
+                                        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-200 text-amber-950 shadow-md transition hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 sm:h-14 sm:w-14 sm:rounded-full"
+                                    >
+                                        <Plus className="h-6 w-6 sm:h-8 sm:w-8" />
+                                        <span className="font-semibold sm:hidden">
+                                            Publicar
+                                        </span>
+                                        <ChevronDown className="h-4 w-4 sm:hidden" />
+                                    </button>
+
+                                    <div
+                                        className={`absolute right-0 top-full mt-2 w-full min-w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl transition-all sm:w-56 ${
+                                            menuAberto
+                                                ? "visible translate-y-0 opacity-100"
+                                                : "invisible translate-y-2 opacity-0 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100"
+                                        }`}
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={abrirServico}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-sky-50 hover:text-cyan-950"
+                                        >
+                                            <BriefcaseBusiness className="h-5 w-5 text-cyan-900" />
+                                            Cadastrar serviço
+                                        </button>
+
+                                        <div className="border-t border-slate-100" />
+
+                                        <button
+                                            type="button"
+                                            onClick={abrirProduto}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-sky-50 hover:text-cyan-950"
+                                        >
+                                            <Package className="h-5 w-5 text-cyan-900" />
+                                            Cadastrar produto
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="mt-6 grid grid-cols-1 gap-4 sm:mt-8 sm:grid-cols-2 lg:grid-cols-3 sm:gap-5">
@@ -313,7 +519,7 @@ export default function ColaboradorPage() {
                                     },
                                     {
                                         Icon: Package,
-                                        valor: 0,
+                                        valor: quantidadeProdutos,
                                         texto: "Produtos anunciados",
                                     },
                                     {
@@ -359,9 +565,7 @@ export default function ColaboradorPage() {
                                         </p>
 
                                         <button
-                                            onClick={() =>
-                                                setAtualizar((n) => n + 1)
-                                            }
+                                            onClick={() => setAtualizar((n) => n + 1)}
                                             className="mt-4 w-full rounded-lg bg-cyan-950 px-5 py-3 text-sm text-white transition hover:bg-cyan-900 sm:w-auto"
                                         >
                                             Tentar novamente
@@ -405,22 +609,24 @@ export default function ColaboradorPage() {
                     </section>
                 </div>
 
+                {/* RODAPÉ VOLTARE */}
                 <footer className="px-2 py-5 text-center text-xs text-slate-500 sm:py-6 sm:text-sm">
-                    EletroConnect — Painel do colaborador
+                    © {ano ?? ""} Voltare. Todos os direitos reservados.
                 </footer>
             </div>
 
-            {modal && (
+            {/* Modal de cadastro de serviço */}
+            {modal === "servico" && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-3 sm:p-5">
                     <section className="my-auto max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6 lg:p-8">
-
                         <div className="flex items-center justify-between gap-3">
                             <h2 className="text-xl font-bold text-cyan-950 sm:text-2xl">
                                 Publicar serviço
                             </h2>
 
                             <button
-                                onClick={() => setModal(false)}
+                                type="button"
+                                onClick={fecharModal}
                                 aria-label="Fechar"
                                 className="shrink-0 rounded-lg p-2 transition hover:bg-slate-100"
                             >
@@ -428,13 +634,9 @@ export default function ColaboradorPage() {
                             </button>
                         </div>
 
-                        <form onSubmit={cadastrar} className="mt-5 space-y-4 sm:mt-6">
-
+                        <form onSubmit={cadastrarServico} className="mt-5 space-y-4 sm:mt-6">
                             <div>
-                                <label
-                                    htmlFor="nome"
-                                    className="mb-2 block text-sm font-medium"
-                                >
+                                <label htmlFor="nome" className="mb-2 block text-sm font-medium">
                                     Nome do serviço
                                 </label>
 
@@ -450,10 +652,7 @@ export default function ColaboradorPage() {
                             </div>
 
                             <div>
-                                <label
-                                    htmlFor="experiencia"
-                                    className="mb-2 block text-sm font-medium"
-                                >
+                                <label htmlFor="experiencia" className="mb-2 block text-sm font-medium">
                                     Experiência
                                 </label>
 
@@ -469,10 +668,7 @@ export default function ColaboradorPage() {
                             </div>
 
                             <div>
-                                <label
-                                    htmlFor="descricao"
-                                    className="mb-2 block text-sm font-medium"
-                                >
+                                <label htmlFor="descricao" className="mb-2 block text-sm font-medium">
                                     Descrição do serviço
                                 </label>
 
@@ -489,10 +685,7 @@ export default function ColaboradorPage() {
                             </div>
 
                             {erroCadastro && (
-                                <p
-                                    role="alert"
-                                    className="wrap-break-word text-sm text-red-700"
-                                >
+                                <p role="alert" className="wrap-break-word text-sm text-red-700">
                                     {erroCadastro}
                                 </p>
                             )}
@@ -502,9 +695,115 @@ export default function ColaboradorPage() {
                                 disabled={salvando}
                                 className="w-full rounded-xl bg-cyan-950 py-3 text-sm font-semibold text-white transition hover:bg-cyan-900 disabled:cursor-not-allowed disabled:opacity-60 sm:text-base"
                             >
-                                {salvando
-                                    ? "Publicando..."
-                                    : "Publicar serviço"}
+                                {salvando ? "Publicando..." : "Publicar serviço"}
+                            </button>
+                        </form>
+                    </section>
+                </div>
+            )}
+
+            {/* Modal de cadastro de produto */}
+            {modal === "produto" && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-3 sm:p-5">
+                    <section className="my-auto max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6 lg:p-8">
+                        <div className="flex items-center justify-between gap-3">
+                            <h2 className="text-xl font-bold text-cyan-950 sm:text-2xl">
+                                Cadastrar produto
+                            </h2>
+
+                            <button
+                                type="button"
+                                onClick={fecharModal}
+                                aria-label="Fechar"
+                                className="shrink-0 rounded-lg p-2 transition hover:bg-slate-100"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={cadastrarProduto} className="mt-5 space-y-4 sm:mt-6">
+                            <div>
+                                <label htmlFor="nomeProduto" className="mb-2 block text-sm font-medium">
+                                    Nome do produto
+                                </label>
+
+                                <input
+                                    id="nomeProduto"
+                                    value={nomeProduto}
+                                    onChange={(e) => setNomeProduto(e.target.value)}
+                                    required
+                                    maxLength={120}
+                                    placeholder="Ex.: Disjuntor elétrico"
+                                    className="w-full min-w-0 rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 sm:px-4 sm:text-base"
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="precoProduto" className="mb-2 block text-sm font-medium">
+                                    Preço (R$)
+                                </label>
+
+                                <input
+                                    id="precoProduto"
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    value={precoProduto}
+                                    onChange={(e) => setPrecoProduto(e.target.value)}
+                                    required
+                                    placeholder="Ex.: 49.90"
+                                    className="w-full min-w-0 rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 sm:px-4 sm:text-base"
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="descricaoProduto" className="mb-2 block text-sm font-medium">
+                                    Descrição do produto
+                                </label>
+
+                                <textarea
+                                    id="descricaoProduto"
+                                    value={descricaoProduto}
+                                    onChange={(e) => setDescricaoProduto(e.target.value)}
+                                    required
+                                    maxLength={2000}
+                                    rows={4}
+                                    placeholder="Descreva as características do produto..."
+                                    className="w-full min-w-0 resize-y rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 sm:px-4 sm:text-base"
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="imagemProduto" className="mb-2 block text-sm font-medium">
+                                    Imagem do produto
+                                </label>
+
+                                <input
+                                    id="imagemProduto"
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                            setImagemProduto(e.target.files[0]);
+                                        }
+                                    }}
+                                    required
+                                    className="w-full text-sm text-slate-500 file:mr-4 file:rounded-xl file:border-0 file:bg-sky-100 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-cyan-950 hover:file:bg-sky-200"
+                                />
+                            </div>
+
+                            {erroCadastro && (
+                                <p role="alert" className="wrap-break-word text-sm text-red-700">
+                                    {erroCadastro}
+                                </p>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={salvando}
+                                className="w-full rounded-xl bg-cyan-950 py-3 text-sm font-semibold text-white transition hover:bg-cyan-900 disabled:cursor-not-allowed disabled:opacity-60 sm:text-base"
+                            >
+                                {salvando ? "Cadastrando..." : "Cadastrar produto"}
                             </button>
                         </form>
                     </section>

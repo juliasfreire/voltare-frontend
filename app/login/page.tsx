@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import Swal from "sweetalert2";
 import { Zap } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
@@ -11,6 +10,23 @@ const API_URL = (
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 ).replace(/\/$/, "");
 
+type DadosToken = {
+    id?: number | string;
+    nome?: string;
+    name?: string;
+    nomeCompleto?: string;
+    nome_completo?: string;
+    nome_usuario?: string;
+    email?: string;
+    tipo?: string;
+    perfil?: string;
+    role?: string;
+    tipoUsuario?: string;
+    usuario?: Record<string, any>;
+    user?: Record<string, any>;
+    dados?: Record<string, any>;
+};
+
 export default function LoginPage() {
     const router = useRouter();
 
@@ -18,7 +34,7 @@ export default function LoginPage() {
     const [senha, setSenha] = useState("");
     const [carregando, setCarregando] = useState(false);
 
-    async function logar(e: any) {
+    async function logar(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
 
         if (!email.trim() || !senha) {
@@ -52,7 +68,9 @@ export default function LoginPage() {
             try {
                 dados = texto ? JSON.parse(texto) : {};
             } catch {
-                throw new Error("O backend retornou uma resposta inválida.");
+                throw new Error(
+                    "O backend retornou uma resposta inválida."
+                );
             }
 
             if (!resposta.ok) {
@@ -63,18 +81,55 @@ export default function LoginPage() {
                 );
             }
 
-            // O backend retorna apenas o token
             if (!dados.token) {
-                throw new Error("Token de autenticação não recebido do servidor.");
+                throw new Error(
+                    "Token de autenticação não recebido do servidor."
+                );
             }
 
-            // Salva o token JWT no localStorage
             localStorage.setItem("token", dados.token);
 
-            // Decodifica o token JWT
-            const usuarioDecodificado: any = jwtDecode(dados.token);
+            const usuarioDecodificado =
+                jwtDecode<DadosToken>(dados.token);
 
-            const tipo = String(usuarioDecodificado.tipo || "")
+            const usuarioToken =
+                usuarioDecodificado.usuario ||
+                usuarioDecodificado.user ||
+                usuarioDecodificado.dados ||
+                {};
+
+            const nome =
+                usuarioToken.nome ||
+                usuarioToken.name ||
+                usuarioToken.nomeCompleto ||
+                usuarioToken.nome_completo ||
+                usuarioToken.nome_usuario ||
+                usuarioDecodificado.nome ||
+                usuarioDecodificado.name ||
+                usuarioDecodificado.nomeCompleto ||
+                usuarioDecodificado.nome_completo ||
+                usuarioDecodificado.nome_usuario ||
+                "";
+
+            const emailUsuario =
+                usuarioToken.email ||
+                usuarioDecodificado.email ||
+                email.trim();
+
+            const idUsuario =
+                usuarioToken.id ||
+                usuarioDecodificado.id;
+
+            const tipo = String(
+                usuarioToken.tipo ||
+                usuarioToken.perfil ||
+                usuarioToken.role ||
+                usuarioDecodificado.tipo ||
+                usuarioDecodificado.perfil ||
+                usuarioDecodificado.role ||
+                usuarioDecodificado.tipoUsuario ||
+                ""
+            )
                 .toLowerCase()
                 .trim();
 
@@ -94,8 +149,9 @@ export default function LoginPage() {
                 localStorage.setItem(
                     "usuarioLogado",
                     JSON.stringify({
-                        id: usuarioDecodificado.id,
-                        email: usuarioDecodificado.email ?? email.trim(),
+                        id: idUsuario,
+                        nome: nome,
+                        email: emailUsuario,
                         tipo: "cliente",
                     })
                 );
@@ -108,12 +164,14 @@ export default function LoginPage() {
                 });
 
                 router.push("/cliente");
+
             } else if (ehColaborador) {
                 localStorage.setItem(
                     "usuarioLogado",
                     JSON.stringify({
-                        id: usuarioDecodificado.id,
-                        email: usuarioDecodificado.email ?? email.trim(),
+                        id: idUsuario,
+                        nome: nome,
+                        email: emailUsuario,
                         tipo: "colaborador",
                     })
                 );
@@ -126,6 +184,7 @@ export default function LoginPage() {
                 });
 
                 router.push("/colaborador");
+
             } else {
                 throw new Error(
                     `O tipo de conta '${tipo}' dentro do token não é válido.`
