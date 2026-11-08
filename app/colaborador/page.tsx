@@ -384,8 +384,8 @@ export default function ColaboradorPage() {
         {
             nome: "Mensagens",
             Icon: MessageCircle,
-            acao: () => window.alert("Mensagens em breve."),
-        },
+            acao: () => router.push("/colaborador/mensagens"),
+},
         {
             nome: "Perfil",
             Icon: UserCircle,

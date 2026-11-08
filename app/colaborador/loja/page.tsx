@@ -81,6 +81,18 @@ function formatarPreco(valor: number | string | undefined) {
     });
 }
 
+
+function idDoColaborador(produto: Produto): number | string | undefined {
+    if (produto.colaboradorId) return produto.colaboradorId;
+    if (produto.colaborador_id) return produto.colaborador_id;
+    if (produto.id_prestador) return produto.id_prestador;
+
+    if (typeof produto.colaborador === "object") {
+        return produto.colaborador?.id;
+    }
+
+    return undefined;
+}
 export default function LojaPage() {
     const router = useRouter();
 
@@ -340,12 +352,12 @@ export default function LojaPage() {
                                             )}
 
                                             {/* CONVERSAR COM VENDEDOR */}
-                                            <ContactButton 
-                                                colaboradorId={produto.id_prestador || ""} 
-                                                produtoId={produto.id}
-                                                buttonText="Conversar com vendedor"
-                                                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-800 sm:text-base"
-                                            />
+                                           <ContactButton
+                                                      colaboradorId={idDoColaborador(produto) ?? ""}
+                                                        produtoId={produto.id}
+                                                      buttonText="Conversar com vendedor"
+                                                        className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-800 sm:text-base"
+/>
 
                                         </div>
 
